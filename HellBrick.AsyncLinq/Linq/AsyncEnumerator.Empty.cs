@@ -4,11 +4,10 @@
 	{
 		public static IAsyncEnumerator<T> Empty<T>() => EmptyAsyncEnumerator<T>.Instance;
 
-		private class EmptyAsyncEnumerator<T> : IAsyncEnumerator<T>
+		private static class EmptyAsyncEnumerator<T>
 		{
-			public static IAsyncEnumerator<T> Instance { get; } = new EmptyAsyncEnumerator<T>();
-
-			public AsyncItem<T> GetNextAsync() => AsyncItem<T>.NoItem;
+			public static IAsyncEnumerator<T> Instance { get; } = CreateEmptyEnumerator();
+			private static async IAsyncEnumerator<T> CreateEmptyEnumerator() => await AsyncYield.Break<T>();
 		}
 	}
 }

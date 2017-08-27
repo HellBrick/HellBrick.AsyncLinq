@@ -12,7 +12,7 @@ namespace HellBrick.AsyncLinq
 		{
 			while ( true )
 			{
-				Optional<TItem> item = await asyncEnumerator.GetNextAsync();
+				Optional<TItem> item = await asyncEnumerator;
 				if ( !item.HasValue )
 					break;
 
