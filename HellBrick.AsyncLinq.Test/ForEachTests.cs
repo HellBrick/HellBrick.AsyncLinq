@@ -32,7 +32,7 @@ namespace HellBrick.AsyncLinq.Test
 		public async Task LambdaIsNotCalledIfSequenceIsEmpty()
 		{
 			bool lambdaCalled = false;
-			await new TaskAsyncEnumerator<int>().ForEach( _ => lambdaCalled = true ).ConfigureAwait( true );
+			await AsyncEnumerator.Empty<int>().ForEach( _ => lambdaCalled = true ).ConfigureAwait( true );
 			lambdaCalled.Should().BeFalse();
 		}
 

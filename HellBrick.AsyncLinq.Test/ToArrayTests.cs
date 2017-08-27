@@ -11,8 +11,7 @@ namespace HellBrick.AsyncLinq.Test
 		[Fact]
 		public async Task ReturnsEmptyArrayForEmptySequence()
 		{
-			IAsyncEnumerator<int> enumerator = new TaskAsyncEnumerator<int>();
-			int[] array = await enumerator.ToArray().ConfigureAwait( true );
+			int[] array = await AsyncEnumerator.Empty<int>().ToArray().ConfigureAwait( true );
 			array.Should().BeEmpty();
 		}
 
