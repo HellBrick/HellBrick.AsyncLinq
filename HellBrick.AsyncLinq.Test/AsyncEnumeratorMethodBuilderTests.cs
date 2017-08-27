@@ -137,8 +137,8 @@ namespace HellBrick.AsyncLinq.Test
 			Optional<int> item = await enumerator.GetNextAsync().ConfigureAwait( true );
 			item.Value.Should().Be( expectedValue );
 
-			Task<Optional<int>> nextItemTask = enumerator.GetNextAsync();
-			nextItemTask.IsFaulted.Should().BeTrue();
+			Func<Task<Optional<int>>> nextItemAct = () => enumerator.GetNextAsync();
+			nextItemAct.ShouldThrow<Exception>();
 
 			Optional<int> itemAfterException = await enumerator.GetNextAsync().ConfigureAwait( true );
 			itemAfterException.HasValue.Should().BeFalse();
@@ -331,8 +331,8 @@ namespace HellBrick.AsyncLinq.Test
 		{
 			IAsyncEnumerator<int> enumerator = Outer();
 
-			Task<Optional<int>> itemTask = enumerator.GetNextAsync();
-			itemTask.IsFaulted.Should().Be( true );
+			Func<Task<Optional<int>>> itemAct = () => enumerator.GetNextAsync();
+			itemAct.ShouldThrow<Exception>();
 
 			Optional<int> itemAfterException = await enumerator.GetNextAsync().ConfigureAwait( true );
 			itemAfterException.HasValue.Should().BeFalse();
