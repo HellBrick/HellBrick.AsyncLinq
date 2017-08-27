@@ -9,9 +9,9 @@ namespace HellBrick.AsyncLinq.Test.Helpers
 
 		public TaskAsyncEnumerator( params Task<T>[] tasks ) => _tasks = tasks;
 
-		public Task<Optional<T>> GetNextAsync()
+		public AsyncItem<T> GetNextAsync()
 			=> _tasksEnumerated < _tasks.Length
-			? _tasks[ _tasksEnumerated++ ].ContinueWith( t => new Optional<T>( t.GetAwaiter().GetResult() ) )
-			: Optional<T>.NoValueTask;
+			? new AsyncItem<T>( _tasks[ _tasksEnumerated++ ].ContinueWith( t => new Optional<T>( t.GetAwaiter().GetResult() ) ) )
+			: AsyncItem<T>.NoItem;
 	}
 }

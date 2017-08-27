@@ -65,7 +65,7 @@ namespace HellBrick.AsyncLinq.Test
 		public async Task FinallyBlockIsExecutedOnReturnFromInsideTry()
 		{
 			bool isFinallyExecuted = false;
-			Optional<int> emptyItem = await TryBreakFinally().GetNextAsync().ConfigureAwait( false );
+			Optional<int> emptyItem = await TryBreakFinally().GetNextAsync().WithSyncContext();
 			emptyItem.HasValue.Should().BeFalse();
 			isFinallyExecuted.Should().BeTrue();
 
@@ -86,7 +86,7 @@ namespace HellBrick.AsyncLinq.Test
 		public void FinallyBlockIsExecutedOnExceptionBeingThrownFromInsideTry()
 		{
 			bool isFinallyExecuted = false;
-			Func<Task<Optional<int>>> getItemAction = () => TryThrowFinally().GetNextAsync();
+			Func<Task<Optional<int>>> getItemAction = async () => await TryThrowFinally().GetNextAsync();
 			getItemAction.ShouldThrow<Exception>();
 			isFinallyExecuted.Should().BeTrue();
 
@@ -111,11 +111,11 @@ namespace HellBrick.AsyncLinq.Test
 			TaskCompletionSource<int> tcs = new TaskCompletionSource<int>();
 			IAsyncEnumerator<int> enumerator = AwaitTaskThenYieldItem();
 
-			Task<Optional<int>> nextItemTask = enumerator.GetNextAsync();
+			AsyncItem<int> nextItemTask = enumerator.GetNextAsync();
 			nextItemTask.IsCompleted.Should().BeFalse();
 
 			tcs.SetResult( expectedValue );
-			Optional<int> yieldedItem = await nextItemTask.ConfigureAwait( true );
+			Optional<int> yieldedItem = await nextItemTask.WithSyncContext();
 			yieldedItem.HasValue.Should().BeTrue();
 			yieldedItem.Value.Should().Be( expectedValue );
 
@@ -134,13 +134,13 @@ namespace HellBrick.AsyncLinq.Test
 			const int expectedValue = 42;
 			IAsyncEnumerator<int> enumerator = YieldItemThenThrow();
 
-			Optional<int> item = await enumerator.GetNextAsync().ConfigureAwait( true );
+			Optional<int> item = await enumerator.GetNextAsync().WithSyncContext();
 			item.Value.Should().Be( expectedValue );
 
-			Func<Task<Optional<int>>> nextItemAct = () => enumerator.GetNextAsync();
+			Func<Task<Optional<int>>> nextItemAct = async () => await enumerator.GetNextAsync();
 			nextItemAct.ShouldThrow<Exception>();
 
-			Optional<int> itemAfterException = await enumerator.GetNextAsync().ConfigureAwait( true );
+			Optional<int> itemAfterException = await enumerator.GetNextAsync().WithSyncContext();
 			itemAfterException.HasValue.Should().BeFalse();
 
 			async IAsyncEnumerator<int> YieldItemThenThrow()
@@ -156,13 +156,13 @@ namespace HellBrick.AsyncLinq.Test
 			TaskCompletionSource<int> tcs = new TaskCompletionSource<int>();
 			IAsyncEnumerator<int> enumerator = AwaitAndYieldItem();
 
-			Task<Optional<int>> itemTask = enumerator.GetNextAsync();
+			AsyncItem<int> itemTask = enumerator.GetNextAsync();
 			tcs.SetException( new Exception( "The punch has been spiked" ) );
 
-			Func<Task<Optional<int>>> awaitFaultyItemAct = () => itemTask;
+			Func<Task<Optional<int>>> awaitFaultyItemAct = async () => await itemTask;
 			awaitFaultyItemAct.ShouldThrow<Exception>();
 
-			Optional<int> itemAfterException = await enumerator.GetNextAsync().ConfigureAwait( true );
+			Optional<int> itemAfterException = await enumerator.GetNextAsync().WithSyncContext();
 			itemAfterException.HasValue.Should().BeFalse();
 
 			async IAsyncEnumerator<int> AwaitAndYieldItem()
@@ -181,7 +181,7 @@ namespace HellBrick.AsyncLinq.Test
 			IAsyncEnumerator<int> enumerator = SideEffectEnumerator();
 			executionStarted.Should().BeFalse();
 
-			Optional<int> nextItem = await enumerator.GetNextAsync().ConfigureAwait( true );
+			Optional<int> nextItem = await enumerator.GetNextAsync().WithSyncContext();
 			executionStarted.Should().BeTrue();
 
 			async IAsyncEnumerator<int> SideEffectEnumerator()
@@ -198,7 +198,7 @@ namespace HellBrick.AsyncLinq.Test
 			IAsyncEnumerator<int> enumerator = EmptyEnumerator();
 			for ( int i = 0; i < 10; i++ )
 			{
-				Optional<int> asyncItem = await enumerator.GetNextAsync().ConfigureAwait( false );
+				Optional<int> asyncItem = await enumerator.GetNextAsync().WithSyncContext();
 				asyncItem.HasValue.Should().BeFalse();
 			}
 
@@ -214,8 +214,8 @@ namespace HellBrick.AsyncLinq.Test
 			TaskCompletionSource<int>[] taskSources = Enumerable.Range( 0, 2 ).Select( _ => new TaskCompletionSource<int>() ).ToArray();
 			IAsyncEnumerator<int> enumerator = TaskDependentEnumerator();
 
-			Task<Optional<int>> firstItemTask = enumerator.GetNextAsync();
-			Func<Task<Optional<int>>> despicableAct = () => enumerator.GetNextAsync();
+			AsyncItem<int> firstItemTask = enumerator.GetNextAsync();
+			Func<Task<Optional<int>>> despicableAct = async () => await enumerator.GetNextAsync();
 
 			despicableAct.ShouldThrow<PreviousItemNotCompletedException>();
 
@@ -303,12 +303,12 @@ namespace HellBrick.AsyncLinq.Test
 			TaskCompletionSource<int> tcs = new TaskCompletionSource<int>();
 			IAsyncEnumerator<int> enumerator = Outer();
 
-			Task<Optional<int>> itemTask = enumerator.GetNextAsync();
+			AsyncItem<int> itemTask = enumerator.GetNextAsync();
 			tcs.SetException( new Exception( "Catch me if you can" ) );
-			Func<Task<Optional<int>>> getNextAction = () => itemTask;
+			Func<Task<Optional<int>>> getNextAction = async () => await itemTask;
 			getNextAction.ShouldThrow<Exception>();
 
-			Optional<int> itemAfterException = await enumerator.GetNextAsync().ConfigureAwait( true );
+			Optional<int> itemAfterException = await enumerator.GetNextAsync().WithSyncContext();
 			itemAfterException.HasValue.Should().BeFalse();
 
 			async IAsyncEnumerator<int> Outer()
@@ -331,10 +331,10 @@ namespace HellBrick.AsyncLinq.Test
 		{
 			IAsyncEnumerator<int> enumerator = Outer();
 
-			Func<Task<Optional<int>>> itemAct = () => enumerator.GetNextAsync();
+			Func<Task<Optional<int>>> itemAct = async () => await enumerator.GetNextAsync();
 			itemAct.ShouldThrow<Exception>();
 
-			Optional<int> itemAfterException = await enumerator.GetNextAsync().ConfigureAwait( true );
+			Optional<int> itemAfterException = await enumerator.GetNextAsync().WithSyncContext();
 			itemAfterException.HasValue.Should().BeFalse();
 
 			async IAsyncEnumerator<int> Outer()
@@ -347,7 +347,7 @@ namespace HellBrick.AsyncLinq.Test
 
 		private class VeryBadAsyncEnumeratorThatThrowsOnGetNext : IAsyncEnumerator<int>
 		{
-			public Task<Optional<int>> GetNextAsync() => throw new Exception( "Don't do this. Ever." );
+			public AsyncItem<int> GetNextAsync() => throw new Exception( "Don't do this. Ever." );
 		}
 	}
 }

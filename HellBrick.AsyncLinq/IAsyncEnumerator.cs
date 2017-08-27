@@ -6,6 +6,6 @@ namespace HellBrick.AsyncLinq
 	[AsyncMethodBuilder( typeof( AsyncEnumeratorMethodBuilder<> ) )]
 	public interface IAsyncEnumerator<T>
 	{
-		Task<Optional<T>> GetNextAsync();
+		AsyncItem<T> GetNextAsync();
 	}
 }
