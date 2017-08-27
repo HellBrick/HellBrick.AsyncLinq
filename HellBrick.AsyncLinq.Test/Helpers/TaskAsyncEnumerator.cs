@@ -2,16 +2,17 @@
 
 namespace HellBrick.AsyncLinq.Test.Helpers
 {
-	internal class TaskAsyncEnumerator<T> : IAsyncEnumerator<T>
+	internal static class TaskAsyncEnumerator
 	{
-		private readonly Task<T>[] _tasks;
-		private int _tasksEnumerated = 0;
+		public static async IAsyncEnumerator<T> Create<T>( params Task<T>[] tasks )
+		{
+			foreach ( Task<T> task in tasks )
+			{
+				T item = await task.ConfigureAwait( false );
+				await AsyncYield.Item( item );
+			}
 
-		public TaskAsyncEnumerator( params Task<T>[] tasks ) => _tasks = tasks;
-
-		public AsyncItem<T> GetNextAsync()
-			=> _tasksEnumerated < _tasks.Length
-			? new AsyncItem<T>( _tasks[ _tasksEnumerated++ ].ContinueWith( t => new Optional<T>( t.GetAwaiter().GetResult() ) ) )
-			: AsyncItem<T>.NoItem;
+			return await AsyncYield.Break<T>();
+		}
 	}
 }
