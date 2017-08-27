@@ -64,7 +64,7 @@ namespace HellBrick.AsyncLinq
 				return AsyncItem<T>.NoItem;
 
 			if ( Interlocked.CompareExchange( ref _state, State.ItemRequested, State.None ) != State.None )
-				return new AsyncItem<T>( Task.FromException<Optional<T>>( new PreviousItemNotCompletedException() ) );
+				throw new PreviousItemNotCompletedException();
 
 			BoxedStateMachine.MoveNext();
 
