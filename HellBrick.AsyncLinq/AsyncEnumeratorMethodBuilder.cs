@@ -57,6 +57,7 @@ namespace HellBrick.AsyncLinq
 			}
 			else
 			{
+				_enumerator.StartAwaitingNextItem();
 				IAsyncStateMachine boxedStateMachine = _enumerator.BoxedStateMachine;
 				onCompletedScheduler( awaiter, () => boxedStateMachine.MoveNext() );
 			}

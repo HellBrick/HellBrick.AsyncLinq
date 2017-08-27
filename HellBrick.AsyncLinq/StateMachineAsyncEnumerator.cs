@@ -19,6 +19,8 @@ namespace HellBrick.AsyncLinq
 		private int _state = State.None;
 
 		private bool _isYieldBreakReached;
+		private T _nextItem;
+		private Exception _nextException;
 		private TaskCompletionSource<Optional<T>> _nextItemTaskCompletionSource;
 
 		public IAsyncStateMachine BoxedStateMachine { get; set; }
@@ -29,7 +31,11 @@ namespace HellBrick.AsyncLinq
 			TaskCompletionSource<Optional<T>> tcs = Interlocked.Exchange( ref _nextItemTaskCompletionSource, null );
 			Volatile.Write( ref _isYieldBreakReached, !item.HasValue );
 			Volatile.Write( ref _state, State.None );
-			tcs.SetResult( item );
+
+			if ( tcs != null )
+				tcs.SetResult( item );
+			else if ( item.HasValue )
+				_nextItem = item.Value;
 
 			/// If a yield break happens, we're still going to need to advance the state machine one more time to execute the return statement.
 			/// It's necessary for the finally block to be executed when breaking from inside the try block.
@@ -42,8 +48,15 @@ namespace HellBrick.AsyncLinq
 			TaskCompletionSource<Optional<T>> tcs = Interlocked.Exchange( ref _nextItemTaskCompletionSource, null );
 			Volatile.Write( ref _isYieldBreakReached, true );
 			Volatile.Write( ref _state, State.None );
-			tcs.SetException( exception );
+
+			if ( tcs != null )
+				tcs.SetException( exception );
+			else
+				Volatile.Write( ref _nextException, exception );
 		}
+
+		public void StartAwaitingNextItem()
+			=> Volatile.Write( ref _nextItemTaskCompletionSource, new TaskCompletionSource<Optional<T>>( TaskCreationOptions.RunContinuationsAsynchronously ) );
 
 		public AsyncItem<T> GetNextAsync()
 		{
@@ -53,11 +66,22 @@ namespace HellBrick.AsyncLinq
 			if ( Interlocked.CompareExchange( ref _state, State.ItemRequested, State.None ) != State.None )
 				return new AsyncItem<T>( Task.FromException<Optional<T>>( new PreviousItemNotCompletedException() ) );
 
-			TaskCompletionSource<Optional<T>> newTcs = new TaskCompletionSource<Optional<T>>( TaskCreationOptions.RunContinuationsAsynchronously );
-			Volatile.Write( ref _nextItemTaskCompletionSource, newTcs );
-
 			BoxedStateMachine.MoveNext();
-			return new AsyncItem<T>( newTcs.Task );
+
+			TaskCompletionSource<Optional<T>> tcs = Volatile.Read( ref _nextItemTaskCompletionSource );
+			if ( tcs != null )
+				return new AsyncItem<T>( tcs.Task );
+
+			Exception exception = Interlocked.Exchange( ref _nextException, null );
+			if ( exception != null )
+				return new AsyncItem<T>( Task.FromException<Optional<T>>( exception ) );
+
+			if ( Volatile.Read( ref _isYieldBreakReached ) )
+				return AsyncItem<T>.NoItem;
+
+			T nextItem = _nextItem;
+			_nextItem = default;
+			return new AsyncItem<T>( nextItem );
 		}
 	}
 }
