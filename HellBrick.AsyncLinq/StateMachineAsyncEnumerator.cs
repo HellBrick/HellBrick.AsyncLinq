@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,7 +21,6 @@ namespace HellBrick.AsyncLinq
 
 		private bool _isYieldBreakReached;
 		private T _nextItem;
-		private Exception _nextException;
 		private TaskCompletionSource<Optional<T>> _nextItemTaskCompletionSource;
 
 		public IAsyncStateMachine BoxedStateMachine { get; set; }
@@ -52,7 +52,7 @@ namespace HellBrick.AsyncLinq
 			if ( tcs != null )
 				tcs.SetException( exception );
 			else
-				Volatile.Write( ref _nextException, exception );
+				ExceptionDispatchInfo.Capture( exception ).Throw();
 		}
 
 		public void StartAwaitingNextItem()
@@ -71,10 +71,6 @@ namespace HellBrick.AsyncLinq
 			TaskCompletionSource<Optional<T>> tcs = Volatile.Read( ref _nextItemTaskCompletionSource );
 			if ( tcs != null )
 				return new AsyncItem<T>( tcs.Task );
-
-			Exception exception = Interlocked.Exchange( ref _nextException, null );
-			if ( exception != null )
-				return new AsyncItem<T>( Task.FromException<Optional<T>>( exception ) );
 
 			if ( Volatile.Read( ref _isYieldBreakReached ) )
 				return AsyncItem<T>.NoItem;
