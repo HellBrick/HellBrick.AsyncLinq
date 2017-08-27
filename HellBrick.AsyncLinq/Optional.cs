@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HellBrick.AsyncLinq
 {
@@ -8,6 +9,7 @@ namespace HellBrick.AsyncLinq
 #pragma warning disable IDE0034 // Simplify 'default' expression
 		public static Optional<T> NoValue { get; } = default( Optional<T> );
 #pragma warning restore IDE0034 // Simplify 'default' expression
+		public static Task<Optional<T>> NoValueTask { get; } = Task.FromResult( NoValue );
 
 		public Optional( T value ) => (HasValue, Value) = (true, value);
 
