@@ -51,12 +51,6 @@ namespace HellBrick.AsyncLinq
 				Optional<T> newItem = new Optional<T>( itemAwaiter.Item );
 				_enumerator.CompleteCurrentItem( newItem );
 			}
-			else if ( typeof( TAwaiter ) == typeof( AsyncYield.AsyncItemsAwaitable<T> ) )
-			{
-				ref AsyncYield.AsyncItemsAwaitable<T> multiItemAwaiter = ref Unsafe.As<TAwaiter, AsyncYield.AsyncItemsAwaitable<T>>( ref awaiter );
-				IAsyncEnumerator<T> itemEnumerator = multiItemAwaiter.ItemEnumerator;
-				_enumerator.SetCurrentEnumerator( itemEnumerator );
-			}
 			else if ( typeof( TAwaiter ) == typeof( AsyncYield.AsyncBreakAwaitable<T> ) )
 			{
 				_enumerator.CompleteCurrentItem( Optional<T>.NoValue );
