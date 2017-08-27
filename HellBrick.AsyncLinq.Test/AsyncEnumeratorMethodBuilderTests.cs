@@ -232,47 +232,6 @@ namespace HellBrick.AsyncLinq.Test
 		}
 
 		[Fact]
-		public async Task CanSwitchToAndFromYieldItems()
-		{
-			int[] itemsBefore = Enumerable.Range( 100, 5 ).ToArray();
-			int[] innerEnumeratorItems = Enumerable.Range( 100, 5 ).ToArray();
-			int[] itemsAfter = Enumerable.Range( 300, 5 ).ToArray();
-
-			int[] enumeratedItems = await YieldItemsCombo().ToArray().ConfigureAwait( false );
-			int[] expectedItems
-				= itemsBefore
-				.Concat( innerEnumeratorItems )
-				.Concat( itemsAfter )
-				.ToArray();
-
-			enumeratedItems.Should().HaveEquivalentItems( expectedItems );
-
-			async IAsyncEnumerator<int> YieldItemsCombo()
-			{
-				foreach ( int item in itemsBefore )
-					await AsyncYield.Item( item );
-
-				await AsyncYield.Items( InnerEnumerator() );
-
-				foreach ( int item in itemsAfter )
-					await AsyncYield.Item( item );
-
-				return await AsyncYield.Break<int>();
-
-				async IAsyncEnumerator<int> InnerEnumerator()
-				{
-					foreach ( int item in innerEnumeratorItems )
-					{
-						await Task.Yield();
-						await AsyncYield.Item( item );
-					}
-
-					return await AsyncYield.Break<int>();
-				}
-			}
-		}
-
-		[Fact]
 		public async Task AsyncLocalsAreFlowedCorrectlyBetweenYields()
 		{
 			int[] yieldedItems = await AsyncLocalEnumerator().ToArray().ConfigureAwait( true );
@@ -295,59 +254,6 @@ namespace HellBrick.AsyncLinq.Test
 
 				return await AsyncYield.Break<int>();
 			}
-		}
-
-		[Fact]
-		public async Task AsynchronousInnerExceptionIsPropagatedToGetNextCall()
-		{
-			TaskCompletionSource<int> tcs = new TaskCompletionSource<int>();
-			IAsyncEnumerator<int> enumerator = Outer();
-
-			AsyncItem<int> itemTask = enumerator.GetNextAsync();
-			tcs.SetException( new Exception( "Catch me if you can" ) );
-			Func<Task<Optional<int>>> getNextAction = async () => await itemTask;
-			getNextAction.ShouldThrow<Exception>();
-
-			Optional<int> itemAfterException = await enumerator.GetNextAsync().WithSyncContext();
-			itemAfterException.HasValue.Should().BeFalse();
-
-			async IAsyncEnumerator<int> Outer()
-			{
-				await AsyncYield.Items( Inner() );
-				return await AsyncYield.Break<int>();
-
-				async IAsyncEnumerator<int> Inner()
-				{
-					int value = await tcs.Task.ConfigureAwait( false );
-					await AsyncYield.Item( value );
-					await AsyncYield.Item( 42 );
-					return await AsyncYield.Break<int>();
-				}
-			}
-		}
-
-		[Fact]
-		public async Task SynchronousInnerExceptionIsPropagatedToGetNextCall()
-		{
-			IAsyncEnumerator<int> enumerator = Outer();
-
-			Func<Task<Optional<int>>> itemAct = async () => await enumerator.GetNextAsync();
-			itemAct.ShouldThrow<Exception>();
-
-			Optional<int> itemAfterException = await enumerator.GetNextAsync().WithSyncContext();
-			itemAfterException.HasValue.Should().BeFalse();
-
-			async IAsyncEnumerator<int> Outer()
-			{
-				await AsyncYield.Items( new VeryBadAsyncEnumeratorThatThrowsOnGetNext() );
-				await AsyncYield.Item( 42 );
-				return await AsyncYield.Break<int>();
-			}
-		}
-
-		private class VeryBadAsyncEnumeratorThatThrowsOnGetNext : IAsyncEnumerator<int>
-		{
-			public AsyncItem<int> GetNextAsync() => throw new Exception( "Don't do this. Ever." );
 		}
 	}
 }

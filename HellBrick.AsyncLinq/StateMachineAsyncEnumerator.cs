@@ -9,7 +9,6 @@ namespace HellBrick.AsyncLinq
 	{
 		private bool _isYieldBreakReached;
 		private TaskCompletionSource<Optional<T>> _nextItemTaskCompletionSource;
-		private IAsyncEnumerator<T> _currentEnumerator;
 
 		public IAsyncStateMachine BoxedStateMachine { get; set; }
 
@@ -33,12 +32,6 @@ namespace HellBrick.AsyncLinq
 			tcs.SetException( exception );
 		}
 
-		public void SetCurrentEnumerator( IAsyncEnumerator<T> itemEnumerator )
-		{
-			Volatile.Write( ref _currentEnumerator, itemEnumerator );
-			AwaitNextInnerEnumeratorItemAndCompleteTcsAsync( itemEnumerator );
-		}
-
 		public AsyncItem<T> GetNextAsync()
 		{
 			if ( Volatile.Read( ref _isYieldBreakReached ) )
@@ -50,35 +43,8 @@ namespace HellBrick.AsyncLinq
 			if ( previousTcs != null || Interlocked.CompareExchange( ref _nextItemTaskCompletionSource, newTcs, previousTcs ) != previousTcs )
 				return new AsyncItem<T>( Task.FromException<Optional<T>>( new PreviousItemNotCompletedException() ) );
 
-			IAsyncEnumerator<T> currentEnumerator = Volatile.Read( ref _currentEnumerator );
-			if ( currentEnumerator != null )
-				AwaitNextInnerEnumeratorItemAndCompleteTcsAsync( currentEnumerator );
-			else
-				BoxedStateMachine.MoveNext();
-
+			BoxedStateMachine.MoveNext();
 			return new AsyncItem<T>( newTcs.Task );
-		}
-
-		private async void AwaitNextInnerEnumeratorItemAndCompleteTcsAsync( IAsyncEnumerator<T> currentEnumerator )
-		{
-			try
-			{
-				Optional<T> item = await currentEnumerator.GetNextAsync();
-				if ( item.HasValue )
-				{
-					TaskCompletionSource<Optional<T>> tcs = Interlocked.Exchange( ref _nextItemTaskCompletionSource, null );
-					tcs.SetResult( item );
-				}
-				else
-				{
-					Volatile.Write( ref _currentEnumerator, null );
-					BoxedStateMachine.MoveNext();
-				}
-			}
-			catch ( Exception ex )
-			{
-				CompleteCurrentItem( ex );
-			}
 		}
 	}
 }

@@ -6,7 +6,6 @@ namespace HellBrick.AsyncLinq
 	public static class AsyncYield
 	{
 		public static AsyncItemAwaitable<T> Item<T>( T item ) => new AsyncItemAwaitable<T>( item );
-		public static AsyncItemsAwaitable<T> Items<T>( IAsyncEnumerator<T> itemEnumerator ) => new AsyncItemsAwaitable<T>( itemEnumerator );
 		public static AsyncBreakAwaitable<T> Break<T>() => new AsyncBreakAwaitable<T>();
 
 		public struct AsyncItemAwaitable<T> : ICriticalNotifyCompletion, IEquatable<AsyncItemAwaitable<T>>
@@ -29,30 +28,6 @@ namespace HellBrick.AsyncLinq
 
 			public static bool operator ==( AsyncItemAwaitable<T> x, AsyncItemAwaitable<T> y ) => x.Equals( y );
 			public static bool operator !=( AsyncItemAwaitable<T> x, AsyncItemAwaitable<T> y ) => !x.Equals( y );
-
-			#endregion
-		}
-
-		public struct AsyncItemsAwaitable<T> : ICriticalNotifyCompletion, IEquatable<AsyncItemsAwaitable<T>>
-		{
-			public AsyncItemsAwaitable( IAsyncEnumerator<T> itemEnumerator ) => ItemEnumerator = itemEnumerator;
-
-			public IAsyncEnumerator<T> ItemEnumerator { get; }
-			public AsyncItemsAwaitable<T> GetAwaiter() => this;
-
-			public bool IsCompleted => false;
-			public void GetResult() { }
-			public void OnCompleted( Action continuation ) => throw new NotSupportedException();
-			public void UnsafeOnCompleted( Action continuation ) => throw new NotSupportedException();
-
-			#region IEquatable<AsyncItemsAwaitable<T>>
-
-			public override int GetHashCode() => System.Collections.Generic.EqualityComparer<IAsyncEnumerator<T>>.Default.GetHashCode( ItemEnumerator );
-			public bool Equals( AsyncItemsAwaitable<T> other ) => System.Collections.Generic.EqualityComparer<IAsyncEnumerator<T>>.Default.Equals( ItemEnumerator, other.ItemEnumerator );
-			public override bool Equals( object obj ) => obj is AsyncItemsAwaitable<T> && Equals( (AsyncItemsAwaitable<T>) obj );
-
-			public static bool operator ==( AsyncItemsAwaitable<T> x, AsyncItemsAwaitable<T> y ) => x.Equals( y );
-			public static bool operator !=( AsyncItemsAwaitable<T> x, AsyncItemsAwaitable<T> y ) => !x.Equals( y );
 
 			#endregion
 		}
