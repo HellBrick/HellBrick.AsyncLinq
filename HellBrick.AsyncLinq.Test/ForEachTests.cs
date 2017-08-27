@@ -21,7 +21,7 @@ namespace HellBrick.AsyncLinq.Test
 				Task.FromResult( 128 )
 			};
 
-			IAsyncEnumerator<int> enumerator = new TaskAsyncEnumerator<int>( itemTasks );
+			IAsyncEnumerator<int> enumerator = TaskAsyncEnumerator.Create( itemTasks );
 			await enumerator.ForEach( item => callArguments.Add( item ) ).ConfigureAwait( true );
 
 			int[] expectedItems = await Task.WhenAll( itemTasks ).ConfigureAwait( true );
@@ -32,7 +32,7 @@ namespace HellBrick.AsyncLinq.Test
 		public async Task LambdaIsNotCalledIfSequenceIsEmpty()
 		{
 			bool lambdaCalled = false;
-			await new TaskAsyncEnumerator<int>().ForEach( _ => lambdaCalled = true ).ConfigureAwait( true );
+			await AsyncEnumerator.Empty<int>().ForEach( _ => lambdaCalled = true ).ConfigureAwait( true );
 			lambdaCalled.Should().BeFalse();
 		}
 
@@ -40,7 +40,7 @@ namespace HellBrick.AsyncLinq.Test
 		public void LambdaExceptionIsPropagated()
 		{
 			const int dangerousItem = 42;
-			IAsyncEnumerator<int> enumerator = new TaskAsyncEnumerator<int>
+			IAsyncEnumerator<int> enumerator = TaskAsyncEnumerator.Create
 			(
 				Task.Delay( 100 ).ContinueWith( _ => 64 ),
 				Task.FromResult( dangerousItem )
@@ -63,7 +63,7 @@ namespace HellBrick.AsyncLinq.Test
 		[Fact]
 		public void ItemExceptionIsPropagated()
 		{
-			IAsyncEnumerator<int> enumerator = new TaskAsyncEnumerator<int>
+			IAsyncEnumerator<int> enumerator = TaskAsyncEnumerator.Create
 			(
 				Task.Delay( 100 ).ContinueWith( _ => 64 ),
 				Task.FromException<int>( new InvalidOperationException() )

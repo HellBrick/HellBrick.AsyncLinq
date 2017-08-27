@@ -11,8 +11,7 @@ namespace HellBrick.AsyncLinq.Test
 		[Fact]
 		public async Task ReturnsEmptyArrayForEmptySequence()
 		{
-			IAsyncEnumerator<int> enumerator = new TaskAsyncEnumerator<int>();
-			int[] array = await enumerator.ToArray().ConfigureAwait( true );
+			int[] array = await AsyncEnumerator.Empty<int>().ToArray().ConfigureAwait( true );
 			array.Should().BeEmpty();
 		}
 
@@ -26,7 +25,7 @@ namespace HellBrick.AsyncLinq.Test
 				Task.FromResult( 128 )
 			};
 
-			IAsyncEnumerator<int> enumerator = new TaskAsyncEnumerator<int>( itemTasks );
+			IAsyncEnumerator<int> enumerator = TaskAsyncEnumerator.Create( itemTasks );
 			int[] array = await enumerator.ToArray().ConfigureAwait( true );
 
 			int[] expectedItems = await Task.WhenAll( itemTasks ).ConfigureAwait( true );
@@ -36,7 +35,7 @@ namespace HellBrick.AsyncLinq.Test
 		[Fact]
 		public void ItemExceptionIsPropagated()
 		{
-			IAsyncEnumerator<int> enumerator = new TaskAsyncEnumerator<int>
+			IAsyncEnumerator<int> enumerator = TaskAsyncEnumerator.Create
 			(
 				Task.FromResult( 42 ),
 				Task.FromException<int>( new InvalidOperationException() )
